@@ -4,7 +4,6 @@ import cats.implicits._
 import cats.effect.{IO, Sync}
 import org.http4s.HttpRoutes
 import org.http4s.dsl.io._
-import io.circe.generic.auto._
 import io.circe.syntax._
 import org.http4s.circe._
 
@@ -28,7 +27,7 @@ object Router {
         }
 
       case req @ POST -> Root / "add" =>
-        req.as[Map[String, String]].flatMap(
+        req.as[Map[String, String]] >>= (
           _
             .toList
             .map({ case (key, value) => controller.add(key, value) })
