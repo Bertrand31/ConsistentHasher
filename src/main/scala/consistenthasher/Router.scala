@@ -19,13 +19,13 @@ object Router {
 
     HttpRoutes.of[IO] {
 
-      // case req @ POST -> Root / "init" =>
-        // req.as[Int].flatMap(controller.initialize) *> Ok("initialized")
-
-      case req @ POST -> Root / "init" =>
-        req.as[Int].flatMap(
-          controller.initialize(_) *> Ok("initialized")
-        )
+      case POST -> Root / "init" / size =>
+        size.toIntOption match {
+          case None => InternalServerError("Please provide a valid number")
+          case Some(nodes) =>
+            controller.initialize(nodes) *>
+            Ok("initialized")
+        }
 
       case req @ POST -> Root / "add" =>
         req.as[Map[String, String]].flatMap(
