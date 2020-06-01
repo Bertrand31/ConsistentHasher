@@ -9,11 +9,11 @@ import scala.collection.SortedMap
 
 class Controller {
 
-  private def getDegrees(hash: Int): Long =
-    (hash.toLong * 360L) / Int.MaxValue.toLong
+  private def getDegrees(hash: Int): Int =
+    ((hash.toLong * 360L) / Int.MaxValue.toLong).toInt
 
   private var buckets = ArraySeq[Map[String, String]]()
-  private var bucketPositions = SortedMap[Long, Int]()
+  private var bucketPositions = SortedMap[Int, Int]()
 
   def initialize(nodes: Int): IO[Unit] = IO {
     this.buckets = ArraySeq.fill(nodes)(Map.empty[String, String])
@@ -25,15 +25,15 @@ class Controller {
         .to(SortedMap)
   }
 
-  private def getPosition(key: String): Long =
+  private def getPosition(key: String): Int =
     getDegrees(Math.abs(stringHash(key)))
 
-  private def getBucket(key: String): Int =
-    this.bucketPositions
-      .toList
-      .dropWhile(_._1 < getPosition(key))
-      .headOption
-      .fold(this.bucketPositions.head._2)(_._2)
+  private def getBucket(key: String): Int = {
+    val bucketsAngles = this.bucketPositions.keys.toIndexedSeq
+    val keyAngle = getPosition(key)
+    val boundedSearch = new BoundedSearch(bucketsAngles, 0, 360)
+    boundedSearch.findNext(keyAngle)
+  }
 
   def add(key: String, value: String): IO[Unit] = IO {
     val bucket = getBucket(key)
