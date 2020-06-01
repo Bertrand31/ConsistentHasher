@@ -19,4 +19,13 @@ class BoundedSearchSpec extends AnyFlatSpec {
     assert(boundedSearch.findNext(23) == 3)
     assert(boundedSearch.findNext(3) == 3)
   }
+
+  it should "return the next biggest number in an edge case" in {
+
+    val seq = Vector(3, 5, 8, 9, 10, 14, 19, 22)
+    val lowerBound = 0
+    val upperBound = 30
+    val boundedSearch = new BoundedSearch(seq, lowerBound, upperBound)
+    assert(boundedSearch.findNext(1) == 3)
+  }
 }

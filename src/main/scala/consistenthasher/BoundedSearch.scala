@@ -13,9 +13,10 @@ class BoundedSearch(seq: IndexedSeq[Int], lower: Int, upper: Int) {
     if (pointer >= this.seq.size) this.seq.head
     else
       this.seq(pointer) match {
-        case x if x == target                     => x
+        case x if x === target                    => x
         case x if x < target && lastBest > target => lastBest
         case x if x < target                      => binaryFindNext(pointer + 1, lastBest, target)
+        case x if x > target && pointer === 0     => x
         case x if x > target                      => binaryFindNext(pointer - 1, x, target)
       }
 

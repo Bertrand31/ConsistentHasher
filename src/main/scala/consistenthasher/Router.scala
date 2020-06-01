@@ -32,10 +32,23 @@ object Router {
             .toList
             .map({ case (key, value) => controller.add(key, value) })
             .sequence *>
-          Ok("added")
+          Ok(controller.show.asJson)
+        )
+
+      case req @ POST -> Root / "remove" =>
+        req.as[Map[String, String]] >>= (
+          _
+            .toList
+            .map({ case (key, _) => controller.remove(key) })
+            .sequence *>
+          Ok(controller.show.asJson)
         )
 
       case GET -> Root / "show" =>
+        Ok(controller.show.asJson)
+
+      case POST -> Root / "add-node" =>
+        controller.addNode *>
         Ok(controller.show.asJson)
     }
   }

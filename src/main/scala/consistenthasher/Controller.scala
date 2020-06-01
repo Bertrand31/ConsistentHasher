@@ -37,7 +37,8 @@ class Controller {
 
   def add(key: String, value: String): IO[Unit] = IO {
     val bucket = getBucket(key)
-    this.buckets = this.buckets.updated(bucket, this.buckets(bucket) + (key -> value))
+    val bucketIndex = this.bucketPositions(bucket)
+    this.buckets = this.buckets.updated(bucketIndex, this.buckets(bucketIndex) + (key -> value))
   }
 
   def remove(key: String): IO[Unit] = IO {
@@ -45,11 +46,26 @@ class Controller {
     this.buckets = this.buckets.updated(bucket, this.buckets(bucket) - key)
   }
 
-  // def addNode: IO[Unit] = IO {
-    // val newNodePosition = getDegrees(Random.between(0, Int.MaxValue))
-    // val newNodeId = this.bucketPositions.size
-    // this.bucketPositions = this.bucketPositions + (newNodePosition -> newNodeId)
-  // }
+  def addNode: IO[Unit] = IO {
+    val newNodePosition = getDegrees(Random.between(0, Int.MaxValue))
+    val newNodeId = this.bucketPositions.size
+
+    val bucketsAngles = this.bucketPositions.keys.toIndexedSeq
+    val boundedSearch = new BoundedSearch(bucketsAngles, 0, 360)
+    val rebalancingTarget = boundedSearch.findNext(newNodePosition)
+    val targetIndex = bucketPositions(rebalancingTarget)
+    val (newBucket, oldBucket) =
+      this.buckets(targetIndex)
+        .partition({
+          case (key, _) => getPosition(key) <= newNodePosition
+        })
+
+    this.bucketPositions = this.bucketPositions + (newNodePosition -> newNodeId)
+    this.buckets =
+      this.buckets
+        .updated(targetIndex, oldBucket)
+        .appended(newBucket)
+  }
 
   def show: Map[Int, Map[String, String]] =
     this.buckets
