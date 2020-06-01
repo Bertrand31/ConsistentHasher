@@ -6,20 +6,7 @@ maintainer := "bertrandjun@gmail.com"
 
 scalaVersion := "2.13.2"
 
-val CirceVersion = "0.13.0"
-val Http4sVersion = "0.21.4"
-
 libraryDependencies ++= Seq(
-  // Web server
-  "org.http4s" %% "http4s-blaze-server" % Http4sVersion,
-  "org.http4s" %% "http4s-blaze-client" % Http4sVersion,
-  "org.http4s" %% "http4s-circe" % Http4sVersion,
-  "org.http4s" %% "http4s-dsl" % Http4sVersion,
-  // JSON encoding and decoding
-  "io.circe" %% "circe-generic" % CirceVersion,
-  "io.circe" %% "circe-core" % CirceVersion,
-  "io.circe" %% "circe-generic" % CirceVersion,
-  "io.circe" %% "circe-parser" % CirceVersion,
   // Tests
   "org.scalatest" %% "scalatest" % "3.1.2",
   // Misc

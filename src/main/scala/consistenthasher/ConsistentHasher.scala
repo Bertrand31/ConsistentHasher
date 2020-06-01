@@ -1,10 +1,10 @@
 package consistenthasher
 
-import cats.implicits._
 import scala.util.hashing.MurmurHash3.stringHash
-import scala.util.Random
-import scala.collection.immutable.ArraySeq
 import scala.collection.SortedMap
+import scala.collection.immutable.ArraySeq
+import cats.implicits._
+import utils.Seed
 
 case class Bucket(id: Int, angle: Int, data: Map[String, String] = Map.empty) {
 
@@ -18,6 +18,7 @@ case class Bucket(id: Int, angle: Int, data: Map[String, String] = Map.empty) {
 case class ConsistentHasher(
   private val buckets: ArraySeq[Bucket],
   private val angleToIndex: SortedMap[Int, Int],
+  private val randomState: Seed,
 ) {
 
   private lazy val boundedSearch =
@@ -49,13 +50,14 @@ case class ConsistentHasher(
   }
 
   def addNode: ConsistentHasher = {
-    val newNodePosition = getDegrees(Random.between(0, Int.MaxValue))
+    val newNodePosition = getDegrees(this.randomState.long)
     val newNodeId = this.buckets.size
 
     val rebalancingTarget = boundedSearch.findNext(newNodePosition)
     val targetIndex = this.angleToIndex(rebalancingTarget)
+    val targetBucket = this.buckets(targetIndex)
     val (newBucket, oldBucket) =
-      this.buckets(targetIndex)
+      targetBucket
         .data
         .partition({
           case (key, _) => getBucketAngle(key) <= newNodePosition
@@ -63,10 +65,15 @@ case class ConsistentHasher(
 
     val newBuckets =
       this.buckets
-        .updated(targetIndex, this.buckets(targetIndex).copy(data=oldBucket))
+        .updated(targetIndex, targetBucket.copy(data=oldBucket))
         .appended(Bucket(newNodeId, newNodePosition, newBucket))
     val newBucketPositions = this.angleToIndex ++ Seq((newNodePosition -> newNodeId))
-    ConsistentHasher(newBuckets, newBucketPositions)
+
+    ConsistentHasher(
+      buckets=newBuckets,
+      angleToIndex=newBucketPositions,
+      randomState=this.randomState.next,
+    )
   }
 
   override def toString(): String =
@@ -79,18 +86,21 @@ case class ConsistentHasher(
 
 object ConsistentHasher {
 
-  private def getDegrees(hash: Int): Int =
+  import scala.util.Random
+
+  private def getDegrees(hash: Long): Int =
     ((hash.toLong * 360L) / Int.MaxValue.toLong).toInt
 
   def apply(bucketsNumber: Int): ConsistentHasher = {
+    val randSeed = Seed(Random.nextInt)
     val buckets =
       (0 until bucketsNumber)
-        .map(Bucket(_, getDegrees(Random.between(0, Int.MaxValue))))
+        .map(Bucket(_, getDegrees(randSeed.long))) // FIXME
         .to(ArraySeq)
     val bucketPositions =
       buckets
         .map(bucket => (bucket.angle -> bucket.id))
         .to(SortedMap)
-    ConsistentHasher(buckets, bucketPositions)
+    ConsistentHasher(buckets, bucketPositions, randSeed)
   }
 }
