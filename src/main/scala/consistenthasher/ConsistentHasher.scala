@@ -13,6 +13,9 @@ case class Bucket(id: Int, angle: Int, data: Map[String, String] = Map.empty) {
 
   def remove(key: String): Bucket =
     copy(data=this.data - key)
+
+  override def toString(): String =
+    this.data.toString
 }
 
 case class ConsistentHasher(
@@ -76,12 +79,11 @@ case class ConsistentHasher(
     )
   }
 
-  override def toString(): String =
+  def showBuckets(): Map[Int, Map[String, String]] =
     this.buckets
       .zipWithIndex
-      .map(_.swap)
+      .map({ case (bucket, index) => (index, bucket.data) })
       .toMap
-      .toString
 }
 
 object ConsistentHasher {
@@ -89,18 +91,24 @@ object ConsistentHasher {
   import scala.util.Random
 
   private def getDegrees(hash: Long): Int =
-    ((hash.toLong * 360L) / Int.MaxValue.toLong).toInt
+    ((hash.toDouble * 360D) / Long.MaxValue.toDouble).toInt
 
-  def apply(bucketsNumber: Int): ConsistentHasher = {
-    val randSeed = Seed(Random.nextInt)
-    val buckets =
+  def apply(bucketsNumber: Int, randSeed: Long = Random.nextLong): ConsistentHasher = {
+    val baseSeed = Seed(randSeed)
+    val (nextSeed +: seeds) =
       (0 until bucketsNumber)
-        .map(Bucket(_, getDegrees(randSeed.long))) // FIXME
+        .foldLeft(List(baseSeed))((acc, _) => acc.head.next +: acc)
+    val buckets =
+      seeds
+        .map(_.long)
+        .map(getDegrees)
+        .zipWithIndex
+        .map({ case (angle, id) => Bucket(id, angle) })
         .to(ArraySeq)
     val bucketPositions =
       buckets
         .map(bucket => (bucket.angle -> bucket.id))
         .to(SortedMap)
-    ConsistentHasher(buckets, bucketPositions, randSeed)
+    ConsistentHasher(buckets, bucketPositions, nextSeed)
   }
 }
