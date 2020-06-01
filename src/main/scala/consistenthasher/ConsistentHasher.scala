@@ -6,12 +6,22 @@ import scala.util.Random
 import scala.collection.immutable.ArraySeq
 import scala.collection.SortedMap
 
-case class Bucket(id: Int, angle: Int, data: Map[String, String] = Map.empty)
+case class Bucket(id: Int, angle: Int, data: Map[String, String] = Map.empty) {
+
+  def insert(key: String, value: String): Bucket =
+    copy(data=this.data + (key -> value))
+
+  def remove(key: String): Bucket =
+    copy(data=this.data - key)
+}
 
 case class ConsistentHasher(
-  private val buckets: ArraySeq[Bucket] = ArraySeq(),
-  private val angleToIndex: SortedMap[Int, Int] = SortedMap(),
+  private val buckets: ArraySeq[Bucket],
+  private val angleToIndex: SortedMap[Int, Int],
 ) {
+
+  private lazy val boundedSearch =
+    new BoundedSearch(this.angleToIndex.keys.toIndexedSeq, 0, 360)
 
   import ConsistentHasher.getDegrees
 
@@ -19,9 +29,7 @@ case class ConsistentHasher(
     getDegrees(Math.abs(stringHash(key)))
 
   private def getBucket(key: String): Bucket = {
-    val bucketsAngles = this.angleToIndex.keys.toIndexedSeq
     val keyAngle = getBucketAngle(key)
-    val boundedSearch = new BoundedSearch(bucketsAngles, 0, 360)
     val targetAngle = boundedSearch.findNext(keyAngle)
     val targetIndex = this.angleToIndex(targetAngle)
     this.buckets(targetIndex)
@@ -30,22 +38,20 @@ case class ConsistentHasher(
   def add(key: String, value: String): ConsistentHasher = {
     val bucket = getBucket(key)
     val newBuckets =
-      this.buckets.updated(bucket.id, bucket.copy(data=bucket.data + (key -> value)))
-    this.copy(buckets=newBuckets)
+      this.buckets.updated(bucket.id, bucket.insert(key, value))
+    copy(buckets=newBuckets)
   }
 
   def remove(key: String): ConsistentHasher = {
     val bucket = getBucket(key)
-    val newBuckets = this.buckets.updated(bucket.id, bucket.copy(data=bucket.data - key))
-    this.copy(buckets=newBuckets)
+    val newBuckets = this.buckets.updated(bucket.id, bucket.remove(key))
+    copy(buckets=newBuckets)
   }
 
   def addNode: ConsistentHasher = {
     val newNodePosition = getDegrees(Random.between(0, Int.MaxValue))
     val newNodeId = this.buckets.size
 
-    val bucketsAngles = this.angleToIndex.keys.toIndexedSeq
-    val boundedSearch = new BoundedSearch(bucketsAngles, 0, 360)
     val rebalancingTarget = boundedSearch.findNext(newNodePosition)
     val targetIndex = this.angleToIndex(rebalancingTarget)
     val (newBucket, oldBucket) =
@@ -76,17 +82,15 @@ object ConsistentHasher {
   private def getDegrees(hash: Int): Int =
     ((hash.toLong * 360L) / Int.MaxValue.toLong).toInt
 
-  def apply(nodesNb: Int): ConsistentHasher = {
-    val nodes =
-      (0 until nodesNb)
-        .map(i =>
-          Bucket(i, getDegrees(Random.between(0, Int.MaxValue)))
-        )
+  def apply(bucketsNumber: Int): ConsistentHasher = {
+    val buckets =
+      (0 until bucketsNumber)
+        .map(Bucket(_, getDegrees(Random.between(0, Int.MaxValue))))
         .to(ArraySeq)
     val bucketPositions =
-      nodes
+      buckets
         .map(bucket => (bucket.angle -> bucket.id))
         .to(SortedMap)
-    ConsistentHasher(nodes, bucketPositions)
+    ConsistentHasher(buckets, bucketPositions)
   }
 }
