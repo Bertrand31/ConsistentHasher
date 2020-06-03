@@ -5,6 +5,7 @@ import scala.collection.SortedMap
 import scala.collection.immutable.ArraySeq
 import cats.implicits._
 import utils.Seed
+import utils.ArraySeqUtils.AugmentedArraySeq
 
 case class Bucket(id: Int, angle: Int, data: Map[String, String] = Map.empty) {
 
@@ -32,28 +33,28 @@ case class ConsistentHasher(
   private def getBucketAngle(key: String): Int =
     getDegrees(Math.abs(stringHash(key)))
 
-  private def getBucket(key: String): Bucket = {
+  private def getBucketId(key: String): Int = {
     val keyAngle = getBucketAngle(key)
     val targetAngle = boundedSearch.findNext(keyAngle)
-    val targetIndex = this.angleToIndex(targetAngle)
-    this.buckets(targetIndex)
+    this.angleToIndex(targetAngle)
   }
 
   def add(key: String, value: String): ConsistentHasher = {
-    val bucket = getBucket(key)
+    val bucketId = getBucketId(key)
     val newBuckets =
-      this.buckets.updated(bucket.id, bucket.insert(key, value))
+      this.buckets.updatedWith(bucketId, _.insert(key, value))
     copy(buckets=newBuckets)
   }
 
   def remove(key: String): ConsistentHasher = {
-    val bucket = getBucket(key)
-    val newBuckets = this.buckets.updated(bucket.id, bucket.remove(key))
+    val bucketId = getBucketId(key)
+    val newBuckets = this.buckets.updatedWith(bucketId, _.remove(key))
     copy(buckets=newBuckets)
   }
 
   def addNode: ConsistentHasher = {
-    val newNodePosition = getDegrees(this.randomState.long)
+    val (rand, nextSeed) = this.randomState.gen
+    val newNodePosition = getDegrees(rand)
     val newNodeId = this.buckets.size
 
     val rebalancingTarget = boundedSearch.findNext(newNodePosition)
@@ -75,7 +76,7 @@ case class ConsistentHasher(
     ConsistentHasher(
       buckets=newBuckets,
       angleToIndex=newBucketPositions,
-      randomState=this.randomState.next,
+      randomState=nextSeed,
     )
   }
 
@@ -97,10 +98,10 @@ object ConsistentHasher {
     val baseSeed = Seed(randSeed)
     val (nextSeed +: seeds) =
       (0 until bucketsNumber)
-        .foldLeft(List(baseSeed))((acc, _) => acc.head.next +: acc)
+        .foldLeft(List(baseSeed.gen))((acc, _) => acc.head._2.gen +: acc)
     val buckets =
       seeds
-        .map(_.long)
+        .map(_._1)
         .map(getDegrees)
         .zipWithIndex
         .map({ case (angle, id) => Bucket(id, angle) })
@@ -109,6 +110,6 @@ object ConsistentHasher {
       buckets
         .map(bucket => (bucket.angle -> bucket.id))
         .to(SortedMap)
-    ConsistentHasher(buckets, bucketPositions, nextSeed)
+    ConsistentHasher(buckets, bucketPositions, nextSeed._2)
   }
 }
