@@ -59,7 +59,7 @@ case class ConsistentHasher(
     val rebalancingTarget = boundedSearch.findNext(newNodePosition)
     val targetIndex = this.angleToIndex(rebalancingTarget)
     val targetBucket = this.buckets(targetIndex)
-    val (newBucket, oldBucket) =
+    val (newBucketData, oldBucketData) =
       targetBucket
         .data
         .partition({
@@ -68,8 +68,8 @@ case class ConsistentHasher(
 
     val newBuckets =
       this.buckets
-        .updated(targetIndex, targetBucket.copy(data=oldBucket))
-        .appended(Bucket(newNodeId, newNodePosition, newBucket))
+        .updated(targetIndex, targetBucket.copy(data=oldBucketData))
+        .appended(Bucket(newNodeId, newNodePosition, newBucketData))
     val newBucketPositions = this.angleToIndex ++ Seq((newNodePosition -> newNodeId))
 
     ConsistentHasher(
