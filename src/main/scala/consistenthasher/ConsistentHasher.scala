@@ -7,19 +7,7 @@ import cats.implicits._
 import utils.Seed
 import utils.ArraySeqUtils.AugmentedArraySeq
 
-case class Bucket(id: Int, angle: Int, data: Map[String, String] = Map.empty) {
-
-  def insert(key: String, value: String): Bucket =
-    copy(data=this.data + (key -> value))
-
-  def remove(key: String): Bucket =
-    copy(data=this.data - key)
-
-  override def toString(): String =
-    this.data.toString
-}
-
-case class ConsistentHasher(
+final case class ConsistentHasher(
   private val buckets: ArraySeq[Bucket],
   private val angleToIndex: SortedMap[Int, Int],
   private val randomState: Seed,
@@ -41,8 +29,7 @@ case class ConsistentHasher(
 
   def add(key: String, value: String): ConsistentHasher = {
     val bucketId = getBucketId(key)
-    val newBuckets =
-      this.buckets.updatedWith(bucketId, _.insert(key, value))
+    val newBuckets = this.buckets.updatedWith(bucketId, _.insert(key, value))
     copy(buckets=newBuckets)
   }
 
@@ -96,7 +83,7 @@ object ConsistentHasher {
 
   def apply(bucketsNumber: Int, randSeed: Long = Random.nextLong): ConsistentHasher = {
     val baseSeed = Seed(randSeed)
-    val (nextSeed +: seeds) =
+    val ((_, nextSeed) +: seeds) =
       (0 until bucketsNumber)
         .foldLeft(List(baseSeed.gen))((acc, _) => acc.head._2.gen +: acc)
     val buckets =
@@ -110,6 +97,6 @@ object ConsistentHasher {
       buckets
         .map(bucket => (bucket.angle -> bucket.id))
         .to(SortedMap)
-    ConsistentHasher(buckets, bucketPositions, nextSeed._2)
+    ConsistentHasher(buckets, bucketPositions, nextSeed)
   }
 }
