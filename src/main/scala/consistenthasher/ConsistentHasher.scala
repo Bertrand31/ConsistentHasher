@@ -13,8 +13,8 @@ final case class ConsistentHasher(
   private val randomState: Seed,
 ) {
 
-  private lazy val boundedSearch =
-    new BoundedSearch(this.angleToIndex.keys.toIndexedSeq, 0, 360)
+  private lazy val findNext =
+    BoundedSearch.findNext(this.angleToIndex.keys.toIndexedSeq, 0, 360)(_)
 
   import ConsistentHasher.getDegrees
 
@@ -23,7 +23,7 @@ final case class ConsistentHasher(
 
   private def getBucketId(key: String): Int = {
     val keyAngle = getBucketAngle(key)
-    val targetAngle = boundedSearch.findNext(keyAngle)
+    val targetAngle = findNext(keyAngle)
     this.angleToIndex(targetAngle)
   }
 
@@ -44,7 +44,7 @@ final case class ConsistentHasher(
     val newNodePosition = getDegrees(rand)
     val newNodeId = this.buckets.size
 
-    val rebalancingTarget = boundedSearch.findNext(newNodePosition)
+    val rebalancingTarget = findNext(newNodePosition)
     val targetIndex = this.angleToIndex(rebalancingTarget)
     val targetBucket = this.buckets(targetIndex)
     val (newBucketData, oldBucketData) =
