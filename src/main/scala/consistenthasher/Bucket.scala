@@ -1,10 +1,10 @@
 package consistenthasher
 
-final case class Bucket(id: Int, angle: Float, data: Map[String, String] = Map.empty) {
+final case class Bucket[A, B](id: Int, angle: Float, data: Map[A, B]) {
 
-  def insert(key: String, value: String): Bucket =
+  def insert(key: A, value: B): Bucket[A, B] =
     copy(data=this.data + (key -> value))
 
-  def remove(key: String): Bucket =
+  def remove(key: A): Bucket[A, B] =
     copy(data=this.data - key)
 }

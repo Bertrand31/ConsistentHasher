@@ -7,8 +7,8 @@ import cats.implicits._
 import utils.Seed
 import utils.ArraySeqUtils.AugmentedArraySeq
 
-final case class ConsistentHasher(
-  private val buckets: ArraySeq[Bucket],
+final case class ConsistentHasher[A, B](
+  private val buckets: ArraySeq[Bucket[A, B]],
   private val angleToIndex: SortedMap[Float, Int],
   private val randomState: Seed,
 ) {
@@ -18,28 +18,28 @@ final case class ConsistentHasher(
 
   import ConsistentHasher.getDegrees
 
-  private def getBucketAngle(key: String): Float =
-    getDegrees(Math.abs(stringHash(key)))
+  private def getBucketAngle(key: A): Float =
+    getDegrees(Math.abs(stringHash(key.toString)))
 
-  private def getBucketId(key: String): Int = {
+  private def getBucketId(key: A): Int = {
     val keyAngle = getBucketAngle(key)
     val targetAngle = findNext(keyAngle)
     this.angleToIndex(targetAngle)
   }
 
-  def add(key: String, value: String): ConsistentHasher = {
+  def add(key: A, value: B): ConsistentHasher[A, B] = {
     val bucketId = getBucketId(key)
     val newBuckets = this.buckets.updatedWith(bucketId, _.insert(key, value))
     copy(buckets=newBuckets)
   }
 
-  def remove(key: String): ConsistentHasher = {
+  def remove(key: A): ConsistentHasher[A, B] = {
     val bucketId = getBucketId(key)
     val newBuckets = this.buckets.updatedWith(bucketId, _.remove(key))
     copy(buckets=newBuckets)
   }
 
-  def addNode: ConsistentHasher = {
+  def addNode: ConsistentHasher[A, B] = {
     val (rand, nextSeed) = this.randomState.gen
     val newNodePosition = getDegrees(rand.toInt)
     val newNodeId = this.buckets.size
@@ -67,7 +67,7 @@ final case class ConsistentHasher(
     )
   }
 
-  def showBuckets(): Map[Int, Map[String, String]] =
+  def showBuckets: Map[Int, Map[A, B]] =
     this.buckets
       .zipWithIndex
       .map({ case (bucket, index) => (index, bucket.data) })
@@ -81,7 +81,7 @@ object ConsistentHasher {
   private def getDegrees(hash: Int): Float =
     ((hash.toLong * 360) / Long.MaxValue.toDouble).toFloat
 
-  def apply(bucketsNumber: Int, randSeed: Long = Random.nextLong): ConsistentHasher = {
+  def apply[A, B](bucketsNumber: Int, randSeed: Long = Random.nextLong): ConsistentHasher[A, B] = {
     val baseSeed = Seed(randSeed)
     val ((_, nextSeed) +: seeds) =
       (0 until bucketsNumber)
@@ -91,12 +91,12 @@ object ConsistentHasher {
         .map(_._1.toInt)
         .map(getDegrees)
         .zipWithIndex
-        .map({ case (angle, id) => Bucket(id, angle) })
+        .map({ case (angle, id) => Bucket(id, angle, Map.empty[A, B]) })
         .to(ArraySeq)
     val bucketPositions =
       buckets
         .map(bucket => (bucket.angle -> bucket.id))
         .to(SortedMap)
-    ConsistentHasher(buckets, bucketPositions, nextSeed)
+    ConsistentHasher[A, B](buckets, bucketPositions, nextSeed)
   }
 }

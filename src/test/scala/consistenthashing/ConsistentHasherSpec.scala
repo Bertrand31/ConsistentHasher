@@ -8,7 +8,7 @@ class ConsistentHasherSpec extends AnyFlatSpec {
   behavior of "the constructor"
 
   val seed = 1
-  val hasher = ConsistentHasher(2, seed)
+  val hasher = ConsistentHasher[String, String](2, seed)
 
   it should "initialize correctly" in {
 
