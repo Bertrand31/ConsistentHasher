@@ -9,16 +9,16 @@ import utils.ArraySeqUtils.AugmentedArraySeq
 
 final case class ConsistentHasher(
   private val buckets: ArraySeq[Bucket],
-  private val angleToIndex: SortedMap[Int, Int],
+  private val angleToIndex: SortedMap[Float, Int],
   private val randomState: Seed,
 ) {
 
   private lazy val findNext =
-    BoundedSearch.findNext(this.angleToIndex.keys.toIndexedSeq, 0, 360)(_)
+    BoundedSearch.findNext(this.angleToIndex.keys.toIndexedSeq, 0, 360)
 
   import ConsistentHasher.getDegrees
 
-  private def getBucketAngle(key: String): Int =
+  private def getBucketAngle(key: String): Float =
     getDegrees(Math.abs(stringHash(key)))
 
   private def getBucketId(key: String): Int = {
@@ -78,8 +78,8 @@ object ConsistentHasher {
 
   import scala.util.Random
 
-  private def getDegrees(hash: Long): Int =
-    ((hash.toDouble * 360D) / Long.MaxValue.toDouble).toInt
+  private def getDegrees(hash: Long): Float =
+    ((hash.toDouble * 360D) / Long.MaxValue.toDouble).toFloat
 
   def apply(bucketsNumber: Int, randSeed: Long = Random.nextLong): ConsistentHasher = {
     val baseSeed = Seed(randSeed)

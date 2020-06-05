@@ -1,6 +1,6 @@
 package consistenthasher
 
-final case class Bucket(id: Int, angle: Int, data: Map[String, String] = Map.empty) {
+final case class Bucket(id: Int, angle: Float, data: Map[String, String] = Map.empty) {
 
   def insert(key: String, value: String): Bucket =
     copy(data=this.data + (key -> value))

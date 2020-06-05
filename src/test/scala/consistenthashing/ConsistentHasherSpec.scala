@@ -25,15 +25,15 @@ class ConsistentHasherSpec extends AnyFlatSpec {
 
     val withFoo = hasher.add("foo", "bar")
     val expected = Map(
-      (0 -> Map()),
-      (1 -> Map(("foo" -> "bar"))),
+      (0 -> Map(("foo" -> "bar"))),
+      (1 -> Map()),
     )
     assert(withFoo.showBuckets === expected)
 
     val withBar = withFoo.add("bar", "baz")
     val expected2 = Map(
-      (0 -> Map()),
-      (1 -> Map(("bar" -> "baz"), ("foo" -> "bar"))),
+      (0 -> Map(("bar" -> "baz"), ("foo" -> "bar"))),
+      (1 -> Map()),
     )
     assert(withBar.showBuckets === expected2)
   }
