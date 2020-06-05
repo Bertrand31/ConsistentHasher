@@ -14,7 +14,7 @@ final case class ConsistentHasher(
 ) {
 
   private lazy val findNext =
-    BoundedSearch.findNext(this.angleToIndex.keys.toIndexedSeq, 0, 360)
+    BoundedSearch.findNext[Float](this.angleToIndex.keys.toIndexedSeq, 0, 360)
 
   import ConsistentHasher.getDegrees
 
@@ -41,7 +41,7 @@ final case class ConsistentHasher(
 
   def addNode: ConsistentHasher = {
     val (rand, nextSeed) = this.randomState.gen
-    val newNodePosition = getDegrees(rand)
+    val newNodePosition = getDegrees(rand.toInt)
     val newNodeId = this.buckets.size
 
     val rebalancingTarget = findNext(newNodePosition)
@@ -78,8 +78,8 @@ object ConsistentHasher {
 
   import scala.util.Random
 
-  private def getDegrees(hash: Long): Float =
-    ((hash.toDouble * 360D) / Long.MaxValue.toDouble).toFloat
+  private def getDegrees(hash: Int): Float =
+    ((hash.toLong * 360) / Long.MaxValue.toDouble).toFloat
 
   def apply(bucketsNumber: Int, randSeed: Long = Random.nextLong): ConsistentHasher = {
     val baseSeed = Seed(randSeed)
@@ -88,7 +88,7 @@ object ConsistentHasher {
         .foldLeft(List(baseSeed.gen))((acc, _) => acc.head._2.gen +: acc)
     val buckets =
       seeds
-        .map(_._1)
+        .map(_._1.toInt)
         .map(getDegrees)
         .zipWithIndex
         .map({ case (angle, id) => Bucket(id, angle) })

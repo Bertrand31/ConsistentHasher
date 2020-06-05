@@ -2,15 +2,18 @@ package consistenthasher
 
 import scala.annotation.tailrec
 import cats.implicits._
+import cats.kernel.{Eq => CatsEq}
 
 object BoundedSearch {
 
-  def findNext(seq: IndexedSeq[Float], lower: Float, upper: Float): Float => Float = {
-    require(!seq.isEmpty)
-    require(upper >= lower)
+  def findNext[T](seq: IndexedSeq[T], lower: T, upper: T)(implicit num: Fractional[T]): T => T = {
+    import num._
+    implicit val eqNumeric = CatsEq.fromUniversalEquals[T]
+    require(!seq.isEmpty, "Passed an empty sequence")
+    require(upper >= lower, "The upper bound cannot be lower than the lower bound")
 
     @tailrec
-    def binaryFindNext(pointer: Int, lastBest: Float, target: Float): Float =
+    def binaryFindNext(pointer: Int, lastBest: T, target: T): T =
       if (pointer >= seq.size) seq.head
       else
         seq(pointer) match {
@@ -21,10 +24,11 @@ object BoundedSearch {
           case x if x > target                      => binaryFindNext(pointer - 1, x, target)
         }
 
-    (elem: Float) => {
-      require(elem >= lower && elem <= upper)
-      val bestGuess = Math.ceil((seq.size - 1) * (elem - lower).toDouble / (upper - lower)).toInt
-      binaryFindNext(bestGuess, seq(bestGuess), elem)
+    (elem: T) => {
+      require(elem >= lower && elem <= upper, "Given element is not within bounds")
+      val bestGuess = (seq.size - 1) * (elem - lower).toFloat / (upper - lower).toFloat
+      val roundedGuess = Math.ceil(bestGuess).toInt
+      binaryFindNext(roundedGuess, seq(roundedGuess), elem)
     }
   }
 }
